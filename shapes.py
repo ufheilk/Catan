@@ -28,7 +28,7 @@ class Circle:
 
 
     def draw(self, screen):
-        if self.color is not CLEAR:
+        if self.color is not None:
             pygame.draw.circle(screen, self.color, self.pos, self.radius)
 
 
