@@ -103,9 +103,6 @@ class Dice:
         self.right_selection = random.choice([die for die in self.right_die_set
                                              if die is not self.right_selection])
 
-    def get_roll(self):
-        return self.left_selection.number + self.right_selection.number
-
     def draw(self, screen):
         self.left_selection.draw(screen)
         self.right_selection.draw(screen)

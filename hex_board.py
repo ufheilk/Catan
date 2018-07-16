@@ -1,9 +1,9 @@
 import pygame
 
 from math import ceil, sqrt
-from node import Node
+from node import Node, GameNode
 from road import Road
-from hex import Hex, HexType
+from hex import Hex, HexType, GameHex
 
 # which nodes are connected by roads
 ROAD_NODES_INDICES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
@@ -77,6 +77,8 @@ NODE_NEIGHBOR_INDICES = [[1, 5, 7],
                          [51, 53],
                          [45, 52]]
 
+NUM_NODES = 54
+
 # node setup (this is ugly, try not to pay it any attention)
 # which nodes go to which Hex tiles (via index into main node list)
 NODE_INDICES_TO_HEX = [[0, 1, 2, 3, 4, 5],
@@ -120,16 +122,18 @@ HEX_SIDE_LEN = ceil(HEX_RADIUS / 2 * sqrt(3))  # 52
 
 
 def create_hex_at(x, y, offsets):
-    return [Node((x + offset_pair[0], y + offset_pair[1])) for offset_pair in offsets]
+    return [GameNode((x + offset_pair[0], y + offset_pair[1])) for offset_pair in offsets]
 
 
 # creates the 54 nodes (vertices) making up the board's 19 hexagons
 # the catan board has a row of 3 on top, then 4, then 5, then 4, then 3
-# these hexs are "big", i.e. have a radius of 60
-# border_size is the thickness of the hex edges
-# returns a list of Node objects
+# NOTE: only for the creation of GameNodes, to be used be client
+# Nodes are setup in the constructor of the HexBoard
 def setup_nodes(start_x, start_y):
 
+    # looking back at this code, I don't know what inspired me to specify
+    # these hex offsets as 'big', as opposed to a small hex offset
+    # leaving this for historical relevance
     big_hex_offsets = [(52, -30), (0, -60), (-52, -30), (-52, 30), (0, 60), (52, 30)]
 
     nodes = []
@@ -189,18 +193,13 @@ def setup_nodes(start_x, start_y):
             else:
                 nodes.append(cur_node)
 
-    # now we want to setup the nodes concept of their neighbors
-    for relative_neighbors, node in zip(NODE_NEIGHBOR_INDICES, nodes):
-        for relative_neighbor in relative_neighbors:
-            node.add_neighbor(nodes[relative_neighbor])
-
     # now setup the roads
     roads = []
     for pair in ROAD_NODES_INDICES:
-        node_pair = []
+        endpoint_pair = []
         for item in pair:
-            node_pair.append(nodes[item])
-        roads.append(Road(node_pair))
+            endpoint_pair.append(nodes[item].center)
+        roads.append(Road(endpoint_pair))
 
     return nodes, roads
 
@@ -221,7 +220,7 @@ def construct_hexes(nodes, nodes_per_hexes):
         for node_index in node_indices:
             nodes_in_hex.append(nodes[node_index])
         # all of the Nodes making up the Hex are now assembling. make the Hex
-        hexes.append(Hex(nodes_in_hex))  # 3 is for border size
+        hexes.append(GameHex(nodes_in_hex))
     return hexes
 
 
@@ -232,10 +231,40 @@ def set_hex_frequencies(hexes):
             h.set_roll_num(frequency)
 
 
+def set_game_hex_frequencies(hexes):
+    for h, hex_type, frequency in zip(hexes, DEFAULT_CATAN_LAYOUT, DEFAULT_CATAN_FREQUENCIES):
+        h.set_color(hex_type.value)
+        if hex_type is not HexType.CACTUS:
+            h.set_frequency(frequency)
+
+
+# for server use. for client representation of hex board see below
 class HexBoard:
+    """A collection of interconnected Node and Road objects"""
+    def __init__(self):
+        self.nodes = [Node() for i in range(NUM_NODES)]
+        # now we want to setup the nodes concept of their neighbors
+        for relative_neighbors, node in zip(NODE_NEIGHBOR_INDICES, self.nodes):
+            for relative_neighbor in relative_neighbors:
+                node.add_neighbor(self.nodes[relative_neighbor])
+
+        # now setup the roads
+        self.roads = []
+        for pair in ROAD_NODES_INDICES:
+            node_pair = []
+            for item in pair:
+                node_pair.append(self.nodes[item])
+            self.roads.append(Road(node_pair))
+
+        load_roads_into_nodes(self.nodes)
+
+        self.hexes = construct_hexes(self.nodes, NODE_INDICES_TO_HEX)
+        set_hex_frequencies(self.hexes)
+
+
+class GameHexBoard:
     def __init__(self, start_x, start_y):
         self.nodes, self.roads = setup_nodes(start_x, start_y)
-        load_roads_into_nodes(self.roads)
         self.hexes = construct_hexes(self.nodes, NODE_INDICES_TO_HEX)
         set_hex_frequencies(self.hexes)
         self.selection = None
