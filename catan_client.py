@@ -25,6 +25,15 @@ class OptionGetter:
             preference = input('Invalid selection. Enter "join" to join or "host" to host: ')
         return preference.lower() in ['h', 'host']
 
+    # is the string a valid int?
+    @classmethod
+    def is_valid_int(cls, user_input):
+        try:
+            print(user_input)
+            return 1 < int(user_input) < OptionGetter.max_players
+        except ValueError or TypeError:
+            return False
+
     @classmethod
     def game_specs(cls):
         # OPTION 1: how many players in this game
@@ -40,16 +49,37 @@ class OptionGetter:
         randomize = randomize.lower() in ['y', 'yes']
 
         return {'num_players': num_players, 'randomize': randomize}
-    
 
-    # is the string a valid int?
     @classmethod
-    def is_valid_int(cls, user_input):
+    def valid_user(cls, username):
+        # is the username valid ASCII?
         try:
-            print(user_input)
-            return 1 < int(user_input) < OptionGetter.max_players
-        except ValueError or TypeError:
+            username.encode('ascii')
+        except UnicodeEncodeError:
             return False
+        else:
+            return 1 < len(username) < 10
+
+    @classmethod
+    def valid_color(cls, color):
+        return color.lower() in ['white', 'black', 'purple', 'brown', 'gray',
+                                 'yellow']
+
+    # gets the username and color from the client
+    @classmethod
+    def user_and_color(cls):
+        username = input('Username: ')
+        color = input('Color (WHITE BLACK PURPLE BROWN GRAY YELLOW): ')
+        while not OptionGetter.valid_user(username) or not OptionGetter.valid_color(color):
+            if not OptionGetter.valid_user(username):
+                username = input('Invalid username selection: ').strip()
+            if not OptionGetter.valid_color(color):
+                color = input('Invalid color: ')
+
+        # the user has finally managed the herculean task of picking a username and color
+        return username, color.lower()
+
+
 
 
 class CatanClient(ConnectionListener):
@@ -87,6 +117,24 @@ class CatanClient(ConnectionListener):
 
         print('Ready to play at game: ' + str(self.game_id))
 
+        # user must now pick a username and color that are unique from
+        # other players already in the game
+        self.accepted_by_server = False
+        while not self.accepted_by_server:
+            username, color = OptionGetter.user_and_color()
+
+            # send server this selection
+            self.send({'action': 'user_color_selection', 'username': username,
+                       'color': color})
+
+            # wait on server for a response
+            self.server_response = False
+            print('Waiting on server...')
+            while not self.server_response:
+                self.pump()
+                sleep(0.01)
+
+        print('Username and color have been accepted!')
         # the user's game specs have been accepted by the server.
         # must wait until the max # of players has been reached
 
@@ -96,6 +144,8 @@ class CatanClient(ConnectionListener):
     # sends it to the server
     def send(self, message):
         message['player_id'] = self.player_id
+        if self.game_id is not None:
+            message['game_id'] = self.game_id
         connection.Send(message)
 
     def Network_init(self, data):
@@ -110,6 +160,20 @@ class CatanClient(ConnectionListener):
         if data['accepted']:
             self.accepted_by_server = True
             self.game_id = data['game_id']
+
+    def Network_check_user_color(self, data):
+        self.server_response = True
+        accept_username = data['accept_username']
+        accept_color = data['accept_color']
+        if accept_username and accept_color:
+            self.accepted_by_server = True
+        elif accept_username and not accept_color:
+            print('Color was already taken by another player')
+        elif not accept_username and accept_color:
+            print('Username was already taken by another player')
+        else:
+            print('Username and color already taken by another player, lmao')
+
 
 
     # if self.Pump() is called twice in a row events will occur twice,

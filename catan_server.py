@@ -3,6 +3,7 @@ import PodSixNet.Channel
 
 from time import sleep
 
+from player import ServerPlayer
 
 class ClientChannel(PodSixNet.Channel.Channel):
     """The interface through which the server receives messages from the client"""
@@ -11,8 +12,16 @@ class ClientChannel(PodSixNet.Channel.Channel):
         player_id = data['player_id']
         host = data['host']
         options = data['options']
+        options = data['options']
         self._server.check_hosting(host, player_id, options)
 
+    # when the user wants to supply their desired username and color
+    def Network_user_color_selection(self, data):
+        player_id = data['player_id']
+        game_id = data['game_id']
+        username = data['username']
+        color = data['color']
+        self._server.check_user_color(player_id, game_id, username, color)
 
 class CatanServer(PodSixNet.Server.Server):
     """Server for hosting games of Catan"""
@@ -55,7 +64,7 @@ class CatanServer(PodSixNet.Server.Server):
         if host:
             self.games.append(Game(options['num_players'], options['randomize']))
             self.players[player_id].Send({'action': 'check_hosting', 'accepted': True,
-                                          'game_id': len(self.games)})
+                                          'game_id': len(self.games) - 1})
 
         else:
             # this player is trying to join a game. check if a game of their
@@ -67,15 +76,26 @@ class CatanServer(PodSixNet.Server.Server):
                                               'game_id': -1})
             else:
                 # there is a game for the user to join
-                game.add_player(self.players[player_id])
-                print(self.games.index(game))
+                game.num_active_players += 1
                 self.players[player_id].Send({'action': 'check_hosting', 'accepted': True,
                                               'game_id': self.games.index(game)})
                 if game.is_full():
                     # the game has reached the max # of players
                     # start the game
-                    for channel in game.player_channels:
-                        print('channel')
+                    pass
+
+    # check if the user's desired username and color have already been taken
+    def check_user_color(self, player_id, game_id, username, color):
+        game = self.games[game_id]
+        valid_user = game.validate_username(username)
+        valid_color = game.validate_color(color)
+        if valid_user and valid_color:
+            # the user has provided all needed information
+            # they are finally able to join the game
+            game.add_player(player_id, self.players[player_id], username, color)
+        self.players[player_id].Send({'action': 'check_user_color',
+                                      'accept_username': valid_user,
+                                      'accept_color': valid_color})
 
 
 # each game will depend on the specifications of the initial host
@@ -85,17 +105,29 @@ class Game:
         # the number of players that must be in the game before it starts
         self.max_num_players = max_num_players
         self.randomize = randomize
-        # number of players currently connected to this game (start w/ just host)
+        # number of players currently connected to this game (start w/ just ho t)
         self.num_active_players = 1
         # mechanism to access all players connected to this game
-        self.player_channels = []
+        self.players = []
 
-    def add_player(self, channel):
-        self.player_channels.append(channel)
-        self.num_active_players += 1
+    # add the full info of a player into this game
+    def add_player(self, player_id, player_channel, username, color):
+        self.players.append(ServerPlayer(player_id, username, color, player_channel))
 
     def is_full(self):
         return self.num_active_players == self.max_num_players
+
+    def validate_username(self, username):
+        for player in self.players:
+            if player.username == username:
+                return False
+        return True
+
+    def validate_color(self, color):
+        for player in self.players:
+            if player.color == color:
+                return False
+        return True
 
 
 if __name__ == '__main__':
