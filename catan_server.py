@@ -48,23 +48,34 @@ class CatanServer(PodSixNet.Server.Server):
 
         # double check that the client hasn't sent faulty info
         if not 1 < options['num_players'] < self.max_players:
-            self.players[player_id].Send({'action': 'check_hosting', 'accepted': False})
+            self.players[player_id].Send({'action': 'check_hosting', 'accepted': False,
+                                          'game_id': -1})
 
         # always accept a new host, as we can always make a new game
         if host:
             self.games.append(Game(options['num_players'], options['randomize']))
-            self.games[-1].add_player(self.players[player_id])
-            self.players[player_id].Send({'action': 'check_hosting', 'accepted': True})
+            self.players[player_id].Send({'action': 'check_hosting', 'accepted': True,
+                                          'game_id': len(self.games)})
+
         else:
             # this player is trying to join a game. check if a game of their
             # specification exists
             game = self.check_games(options['num_players'], options['randomize'])
             if game is None:
                 # no games met the specification, tell user to try again
-                self.players[player_id].Send({'action': 'check_hosting', 'accepted': False})
+                self.players[player_id].Send({'action': 'check_hosting', 'accepted': False,
+                                              'game_id': -1})
             else:
+                # there is a game for the user to join
                 game.add_player(self.players[player_id])
-                self.players[player_id].Send({'action': 'check_hosting', 'accepted': True})
+                print(self.games.index(game))
+                self.players[player_id].Send({'action': 'check_hosting', 'accepted': True,
+                                              'game_id': self.games.index(game)})
+                if game.is_full():
+                    # the game has reached the max # of players
+                    # start the game
+                    for channel in game.player_channels:
+                        print('channel')
 
 
 # each game will depend on the specifications of the initial host
@@ -74,8 +85,8 @@ class Game:
         # the number of players that must be in the game before it starts
         self.max_num_players = max_num_players
         self.randomize = randomize
-        # number of players currently connected to this game
-        self.num_active_players = 0
+        # number of players currently connected to this game (start w/ just host)
+        self.num_active_players = 1
         # mechanism to access all players connected to this game
         self.player_channels = []
 
