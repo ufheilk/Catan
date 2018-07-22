@@ -10,6 +10,9 @@ class ServerPlayer:
         self.victory_points = 0
         self.dev_cards = {'knight': 0, 'road_builder': 0, 'monopoly': 0}
 
+    def send(self, data):
+        self.channel.Send(data)
+
 
 class ClientMyPlayer:
     def __init__(self, username, color):

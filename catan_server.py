@@ -112,7 +112,24 @@ class Game:
 
     # add the full info of a player into this game
     def add_player(self, player_id, player_channel, username, color):
+        # when a player is added to the game, the should first inform the incoming player
+        # of all players already connected. Then all already-connected players should
+        # be informed of the incoming player
+        existing_players = [{'username': player.username, 'color': player.color}
+                            for player in self.players]
+        player_channel.Send({'action': 'current_players', 'players': existing_players})
+
+        # tell other players about this new player
+        for player in self.players:
+            player.send({'action': 'new_player', 'username': username,
+                         'color': color})
+
+        # now actually add the player
         self.players.append(ServerPlayer(player_id, username, color, player_channel))
+
+
+
+
 
     def is_full(self):
         return self.num_active_players == self.max_num_players

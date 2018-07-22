@@ -4,6 +4,8 @@ from time import sleep
 
 from PodSixNet.Connection import connection, ConnectionListener
 
+from player import ClientOtherPlayer
+
 
 # determines whether the user would like to host a game or join a game
 def hosting_preference():
@@ -89,6 +91,8 @@ class CatanClient(ConnectionListener):
 
         self.player_id = None
         self.game_id = None
+        self.my_player = None
+        self.other_players = []
         self.Connect((host, port))
         self.server_response = False
         while not self.server_response:
@@ -174,6 +178,17 @@ class CatanClient(ConnectionListener):
         else:
             print('Username and color already taken by another player, lmao')
 
+    def Network_current_players(self, data):
+        for player in data['players']:
+            self.other_players.append(ClientOtherPlayer(player['username'], player['color']))
+            print('I have been informed of {}, who is {}'.format(player['username'],
+                                                                 player['color']))
+
+    def Network_new_player(self, data):
+        self.other_players.append(ClientOtherPlayer(data['username'], data['color']))
+        print('I have been informed of {}, who is {}'.format(data['username'],
+                                                             data['color']))
+
 
 
     # if self.Pump() is called twice in a row events will occur twice,
@@ -187,6 +202,5 @@ class CatanClient(ConnectionListener):
 if __name__ == '__main__':
     client = CatanClient()
     while True:
-        client.Pump()
-        connection.Pump()
+        client.pump()
         sleep(0.01)
