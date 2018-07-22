@@ -4,6 +4,7 @@ from math import ceil, sqrt
 from node import Node, GameNode
 from road import Road
 from hex import Hex, HexType, GameHex
+from random import shuffle
 
 # which nodes are connected by roads
 ROAD_NODES_INDICES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
@@ -220,19 +221,22 @@ def construct_hexes(nodes, nodes_per_hexes):
         for node_index in node_indices:
             nodes_in_hex.append(nodes[node_index])
         # all of the Nodes making up the Hex are now assembling. make the Hex
-        hexes.append(GameHex(nodes_in_hex))
+        hexes.append(Hex(nodes_in_hex))
     return hexes
 
 
-def set_hex_frequencies(hexes):
-    for h, hex_type, frequency in zip(hexes, DEFAULT_CATAN_LAYOUT, DEFAULT_CATAN_FREQUENCIES):
+def set_hex_frequencies(hexes, randomize):
+    layout = DEFAULT_CATAN_LAYOUT
+    if randomize:
+        shuffle(layout)
+    for h, hex_type, frequency in zip(hexes, layout, DEFAULT_CATAN_FREQUENCIES):
         h.set_type(hex_type)
         if hex_type is not HexType.CACTUS:
             h.set_roll_num(frequency)
 
 
-def set_game_hex_frequencies(hexes):
-    for h, hex_type, frequency in zip(hexes, DEFAULT_CATAN_LAYOUT, DEFAULT_CATAN_FREQUENCIES):
+def set_game_hex_frequencies(hexes, layout):
+    for h, hex_type, frequency in zip(hexes, layout, DEFAULT_CATAN_FREQUENCIES):
         h.set_color(hex_type.value)
         if hex_type is not HexType.CACTUS:
             h.set_frequency(frequency)
@@ -241,7 +245,7 @@ def set_game_hex_frequencies(hexes):
 # for server use. for client representation of hex board see below
 class HexBoard:
     """A collection of interconnected Node and Road objects"""
-    def __init__(self):
+    def __init__(self, randomize):
         self.nodes = [Node() for i in range(NUM_NODES)]
         # now we want to setup the nodes concept of their neighbors
         for relative_neighbors, node in zip(NODE_NEIGHBOR_INDICES, self.nodes):
@@ -256,17 +260,25 @@ class HexBoard:
                 node_pair.append(self.nodes[item])
             self.roads.append(Road(node_pair))
 
-        load_roads_into_nodes(self.nodes)
+        load_roads_into_nodes(self.roads)
 
         self.hexes = construct_hexes(self.nodes, NODE_INDICES_TO_HEX)
-        set_hex_frequencies(self.hexes)
+        set_hex_frequencies(self.hexes, randomize)
+
+    # turn the list of types of this HexBoard into a format that can be sent over the
+    # network to create the user's GameHexBoard
+    def serialize_types(self):
+        serial_types = []
+        for hx in self.hexes:
+            serial_types.append(hx.type.value)
+        return serial_types
 
 
 class GameHexBoard:
-    def __init__(self, start_x, start_y):
+    def __init__(self, start_x, start_y, layout):
         self.nodes, self.roads = setup_nodes(start_x, start_y)
         self.hexes = construct_hexes(self.nodes, NODE_INDICES_TO_HEX)
-        set_hex_frequencies(self.hexes)
+        set_game_hex_frequencies(self.hexes, layout)
         self.selection = None
 
     def draw(self, screen):

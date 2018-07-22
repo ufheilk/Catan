@@ -143,7 +143,6 @@ class CatanClient(ConnectionListener):
         # must wait until the max # of players has been reached
 
 
-
     # to improve readability. adds the clients id to the message and
     # sends it to the server
     def send(self, message):
@@ -188,6 +187,12 @@ class CatanClient(ConnectionListener):
         self.other_players.append(ClientOtherPlayer(data['username'], data['color']))
         print('I have been informed of {}, who is {}'.format(data['username'],
                                                              data['color']))
+
+    def Network_game_board(self, data):
+        layout = data['layout']
+        for item in layout:
+            print(item)
+        self.game_hex_board = data['layout']
 
 
 

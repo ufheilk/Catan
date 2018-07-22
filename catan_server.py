@@ -5,6 +5,8 @@ from time import sleep
 
 from player import ServerPlayer
 
+from hex_board import HexBoard
+
 class ClientChannel(PodSixNet.Channel.Channel):
     """The interface through which the server receives messages from the client"""
     # when the user wants to validate their hosting / game preferences
@@ -104,14 +106,23 @@ class Game:
     def __init__(self, max_num_players, randomize):
         # the number of players that must be in the game before it starts
         self.max_num_players = max_num_players
+
         self.randomize = randomize
+
         # number of players currently connected to this game (start w/ just ho t)
         self.num_active_players = 1
         # mechanism to access all players connected to this game
         self.players = []
 
+        self.hex_board = HexBoard(randomize)
+
     # add the full info of a player into this game
     def add_player(self, player_id, player_channel, username, color):
+        # give new player the board layout
+        player_channel.Send({'action': 'game_board',
+                             'layout': self.hex_board.serialize_types()})
+
+
         # when a player is added to the game, the should first inform the incoming player
         # of all players already connected. Then all already-connected players should
         # be informed of the incoming player
