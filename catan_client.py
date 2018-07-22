@@ -6,6 +6,11 @@ from PodSixNet.Connection import connection, ConnectionListener
 
 from player import ClientOtherPlayer
 
+from game_board import GameBoard
+
+
+WINDOW_WIDTH = 1100
+WINDOW_HEIGHT = 700
 
 # determines whether the user would like to host a game or join a game
 def hosting_preference():
@@ -88,11 +93,18 @@ class CatanClient(ConnectionListener):
     """Client for Catan game. Manages all displays"""
     def __init__(self, host='localhost', port=4200):
         pygame.init()
+        pygame.display.set_caption('Catan')
+
+        self.game_board = None
+        self.screen = None
 
         self.player_id = None
         self.game_id = None
+
         self.my_player = None
+
         self.other_players = []
+
         self.Connect((host, port))
         self.server_response = False
         while not self.server_response:
@@ -139,6 +151,9 @@ class CatanClient(ConnectionListener):
                 sleep(0.01)
 
         print('Username and color have been accepted!')
+        screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        screen.fill((200, 100, 100))
+        self.game_board.draw(screen)
         # the user's game specs have been accepted by the server.
         # must wait until the max # of players has been reached
 
@@ -170,6 +185,7 @@ class CatanClient(ConnectionListener):
         accept_color = data['accept_color']
         if accept_username and accept_color:
             self.accepted_by_server = True
+            pygame.display.set_caption('Settlers of Catan (TM)')
         elif accept_username and not accept_color:
             print('Color was already taken by another player')
         elif not accept_username and accept_color:
@@ -192,9 +208,15 @@ class CatanClient(ConnectionListener):
         layout = data['layout']
         for item in layout:
             print(item)
-        self.game_hex_board = data['layout']
+        self.game_board = GameBoard(200, 200, layout)
 
 
+    def draw(self, screen):
+        self.game_board.draw(screen)
+
+
+    def update(self):
+        pygame.display.flip()
 
     # if self.Pump() is called twice in a row events will occur twice,
     # which is bad. use this instead
@@ -208,4 +230,5 @@ if __name__ == '__main__':
     client = CatanClient()
     while True:
         client.pump()
+        client.update()
         sleep(0.01)

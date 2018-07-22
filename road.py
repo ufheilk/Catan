@@ -15,8 +15,7 @@ class GameRoad:
     """Represents the roads drawn around the hexes in the board"""
     select_color = WHITE
 
-    def __init__(self, nodes, endpoints):
-        self.nodes = nodes
+    def __init__(self, endpoints):
         self.endpoints = endpoints
         self.color = BLACK
 

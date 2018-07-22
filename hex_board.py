@@ -2,7 +2,7 @@ import pygame
 
 from math import ceil, sqrt
 from node import Node, GameNode
-from road import Road
+from road import Road, GameRoad
 from hex import Hex, HexType, GameHex
 from random import shuffle
 
@@ -200,7 +200,7 @@ def setup_nodes(start_x, start_y):
         endpoint_pair = []
         for item in pair:
             endpoint_pair.append(nodes[item].center)
-        roads.append(Road(endpoint_pair))
+        roads.append(GameRoad(endpoint_pair))
 
     return nodes, roads
 
@@ -225,21 +225,54 @@ def construct_hexes(nodes, nodes_per_hexes):
     return hexes
 
 
+# constructs grid of GameHex objects
+def construct_game_hexes(nodes, nodes_per_hexes):
+    hexes = []
+    for node_indices in nodes_per_hexes:
+        nodes_in_hex = []
+        for node_index in node_indices:
+            nodes_in_hex.append(nodes[node_index])
+        # all of the Nodes making up the Hex are now assembling. make the Hex
+        hexes.append(GameHex(nodes_in_hex))
+    return hexes
+
+
 def set_hex_frequencies(hexes, randomize):
     layout = DEFAULT_CATAN_LAYOUT
     if randomize:
         shuffle(layout)
+        # if the layout is randomized, we must move the non-zero frequency
+        # on the cactus tile to the tile that has the 0 frequency
+        for hex_type, frequency in zip(layout, DEFAULT_CATAN_FREQUENCIES):
+            if hex_type is HexType.CACTUS and frequency != 0:
+                taken_by_cactus = frequency
+
     for h, hex_type, frequency in zip(hexes, layout, DEFAULT_CATAN_FREQUENCIES):
         h.set_type(hex_type)
         if hex_type is not HexType.CACTUS:
-            h.set_roll_num(frequency)
+            if frequency == 0:
+                # this is the tile who needs the frequency taken by the cactus
+                h.set_roll_num(taken_by_cactus)
+            else:
+                h.set_roll_num(frequency)
 
 
+# note that here, layout is being sent as a list of colors, so there is no
+# need to try to get color values from a HexType enum
 def set_game_hex_frequencies(hexes, layout):
-    for h, hex_type, frequency in zip(hexes, layout, DEFAULT_CATAN_FREQUENCIES):
-        h.set_color(hex_type.value)
-        if hex_type is not HexType.CACTUS:
-            h.set_frequency(frequency)
+    # if the layout is randomized, we must move the non-zero frequency
+    # on the cactus tile to the tile that has the 0 frequency
+    for hex_color, frequency in zip(layout, DEFAULT_CATAN_FREQUENCIES):
+        if HexType(hex_color) is HexType.CACTUS and frequency != 0:
+            taken_by_cactus = frequency
+
+    for h, hex_color, frequency in zip(hexes, layout, DEFAULT_CATAN_FREQUENCIES):
+        h.set_color(hex_color)
+        if HexType(hex_color) is not HexType.CACTUS:
+            if frequency == 0:
+                h.set_frequency(taken_by_cactus)
+            else:
+                h.set_frequency(frequency)
 
 
 # for server use. for client representation of hex board see below
@@ -277,7 +310,7 @@ class HexBoard:
 class GameHexBoard:
     def __init__(self, start_x, start_y, layout):
         self.nodes, self.roads = setup_nodes(start_x, start_y)
-        self.hexes = construct_hexes(self.nodes, NODE_INDICES_TO_HEX)
+        self.hexes = construct_game_hexes(self.nodes, NODE_INDICES_TO_HEX)
         set_game_hex_frequencies(self.hexes, layout)
         self.selection = None
 
