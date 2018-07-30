@@ -12,6 +12,7 @@ from game_board import GameBoard
 WINDOW_WIDTH = 1100
 WINDOW_HEIGHT = 700
 
+
 # determines whether the user would like to host a game or join a game
 def hosting_preference():
     preference = input('Would you like to [h]ost or [j]oin a game? (Pick one): ')
@@ -93,12 +94,10 @@ class CatanClient(ConnectionListener):
     """Client for Catan game. Manages all displays"""
     def __init__(self, host='localhost', port=4200):
         pygame.init()
-        pygame.display.set_caption('Catan')
 
         self.game_board = None
         self.screen = None
 
-        self.player_id = None
         self.game_id = None
 
         self.my_player = None
@@ -111,7 +110,6 @@ class CatanClient(ConnectionListener):
             self.pump()
             sleep(0.01)
 
-        print(self.player_id)
         print('You have connected to the central server!')
 
         # need to keep asking user
@@ -161,14 +159,13 @@ class CatanClient(ConnectionListener):
     # to improve readability. adds the clients id to the message and
     # sends it to the server
     def send(self, message):
-        message['player_id'] = self.player_id
         if self.game_id is not None:
             message['game_id'] = self.game_id
         connection.Send(message)
 
     def Network_init(self, data):
         self.server_response = True
-        self.player_id = data['player_id']
+        print('Connected to the server...')
 
     # receive message from server about whether the desired game specifications
     # exist. (note: if user is trying to host, their request will always be

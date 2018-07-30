@@ -1,10 +1,10 @@
 
 
 class ServerPlayer:
-    def __init__(self, player_id, username, color, channel):
-        self.username = username
-        self.color = color
+    def __init__(self, channel):
         self.channel = channel
+        self.username = None
+        self.color = None
         self.resources = {'wood': 0, 'sheep': 0, 'wheat': 0, 'reddish-orange': 0,
                           'ore': 0}
         self.victory_points = 0
