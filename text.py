@@ -32,9 +32,12 @@ class SelectableText(Text):
     def check_for_mouse(self, mouse_pos):
         if self.rect.collidepoint(mouse_pos):
             # mouse is over this text
-            self.surface = self.font.render(self.text, True, WHITE)
+            self.select()
         else:
             self.deselect()
+
+    def select(self):
+        self.surface = self.font.render(self.text, True, WHITE)
 
 
 class HexText(Text):
@@ -73,6 +76,9 @@ class HexText(Text):
             else:
                 self.deselect()
                 return None
+
+    def select(self):
+        self.surface = self.font.render(self.text, True, WHITE)
 
     def draw(self, screen):
         super(HexText, self).draw(screen)
@@ -140,3 +146,16 @@ def assign_circles_by_frequency(center, box_height, frequency):
         circles.append(Circle(BLACK, (center[0] - effective_distance,
                                       circle_y), FREQUENCY_CIRCLE_RADIUS))
     return circles
+
+
+# these functions are text-related, so they are going here
+def get_font_height(font):
+    text_surface = font.render('a', True, (0, 0, 0))
+    # 0.9 is a good multiplier to make sure the text doesn't write
+    # over itself
+    return text_surface.get_rect().height * 0.9
+
+
+def get_font_width(font):
+    text_surface = font.render('a', True, (0, 0, 0))
+    return text_surface.get_rect().width

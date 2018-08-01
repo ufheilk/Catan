@@ -1,5 +1,6 @@
 from die import *
 from enum import Enum
+from text import HexText
 
 
 # fonts
@@ -58,7 +59,7 @@ class GameHex:
         self.color = color
 
     def set_frequency(self, num):
-        self.text = Text(frequency_font(), str(num), BLACK, self.center[0], self.center[1])
+        self.text = HexText(frequency_font(), str(num), BLACK, self.center[0], self.center[1])
 
     def deselect(self):
         self.text.deselect()

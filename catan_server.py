@@ -87,7 +87,6 @@ class CatanServer(PodSixNet.Server.Server):
         game.handle_network(channel, 'check_user_color', data)
 
 
-
 if __name__ == '__main__':
     server = CatanServer()
     while True:

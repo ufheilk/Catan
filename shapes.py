@@ -15,6 +15,16 @@ class Rect:
         pygame.draw.rect(screen, self.color, self.rect)
 
 
+class NonCenteredRect:
+    """Class to represent rectangle objects to be drawn WITHOUT CENTERING"""
+    def __init__(self, color, height, width, x, y):
+        self.color = color
+        self.rect = pygame.Rect(x, y, width, height)
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.color, self.rect)
+
+
 class Circle:
     """Class representing a pygame circle, to be used for frequency rating"""
     def __init__(self, color, pos, radius):
