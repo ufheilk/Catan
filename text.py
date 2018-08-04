@@ -29,12 +29,13 @@ class SelectableText(Text):
         self.surface = self.font.render(self.text, True, self.color)
 
     # see if this text needs to be highlighted (e.g. if the user's mouse is over it)
+    # returns itself in case the mouse is between 2 text objects
     def check_for_mouse(self, mouse_pos):
         if self.rect.collidepoint(mouse_pos):
-            # mouse is over this text
-            self.select()
+            return self
         else:
             self.deselect()
+            return None
 
     def select(self):
         self.surface = self.font.render(self.text, True, WHITE)

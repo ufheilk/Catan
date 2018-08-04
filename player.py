@@ -28,54 +28,61 @@ class ClientMyPlayer:
         self.dev_cards = {'knight': 0, 'road_builder': 0, 'monopoly': 0}
 
 
-class ClientOtherPlayer:
+class OtherPlayerView:
     """The players view of other players in the game"""
-    def __init__(self, username, color):
+    def __init__(self, username, color, large_font, small_font, large_font_height,
+                 small_font_height, x, y):
         self.username = username
         self.color = color
-        self.num_resources = 0
-        # the client should only know about victory points of other players
-        # that can be determined by observing the board (e.g. cities, or longest road)
-        self.known_victory_points = 0
-        # shouldn't be able to see other players dev cards' types
-        self.num_dev_cards = 0
-        self.knights_played = 0
 
-        self.name_text = None
+        self.small_font = small_font
+        self.small_font_height = small_font_height
+
+        self.name_text = SelectableText(large_font, self.username + ':', self.color, x, y)
+
+        self.x = x
+        self.y = y + large_font_height
+
         self.victory_point_text = None
         self.dev_card_text = None
         self.knights_played_text = None
-        self.text_items = None
+        self.update({'vp': 0, 'dev': 0, 'knights': 22})
 
-
-    def set_text(self, large_font, small_font):
-        self.name_text = SelectableText(large_font, self.username + ':', self.color, 0, 0)
-        self.victory_point_text = SelectableText(small_font, 'Victory Points: ' +
-                                                 str(self.known_victory_points), self.color,
-                                                 0, 0)
-        self.dev_card_text = SelectableText(small_font, 'Dev Cards: ' + str(self.num_dev_cards),
-                                            self.color, 0, 0)
-        self.knights_played_text = SelectableText(small_font, 'Knights Played: ' +
-                                                  str(self.knights_played), self.color, 0, 0)
-        self.text_items = [self.name_text, self.victory_point_text, self.dev_card_text,
-                           self.knights_played_text]
+    # updates the text under player based on the dictionary passed
+    def update(self, fields):
+        y = self.y
+        self.victory_point_text = SelectableText(self.small_font, 'Victory Points: ' +
+                                                 str(fields['vp']), self.color, self.x, y)
+        y += self.small_font_height
+        self.dev_card_text = SelectableText(self.small_font, 'Dev Cards: ' + str(fields['dev']),
+                                            self.color, self.x, y)
+        y += self.small_font_height
+        self.knights_played_text = SelectableText(self.small_font, 'Knights Played: ' +
+                                                  str(fields['knights']), self.color, self.x, y)
 
     # deselect all text associated with this player
     def deselect(self):
-        for item in self.text_items:
+        text_items = [self.name_text, self.victory_point_text, self.dev_card_text, self.knights_played_text]
+        for item in text_items:
             item.deselect()
+
+    # select all text associated with this player
+    def select(self):
+        text_items = [self.name_text, self.victory_point_text, self.dev_card_text, self.knights_played_text]
+        for item in text_items:
+            item.select()
 
     def check_for_mouse(self, mouse_pos):
         selected = False
-        for item in self.text_items:
+        text_items = [self.name_text, self.victory_point_text, self.dev_card_text, self.knights_played_text]
+        for item in text_items:
             if item.rect.collidepoint(mouse_pos):
                 selected = True
         if selected:
-            for item in self.text_items:
-                item.select()
+            return self
         else:
-            for item in self.text_items:
-                item.deselect()
+            self.deselect()
+            return None
 
     def draw(self, screen):
         self.name_text.draw(screen)

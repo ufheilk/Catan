@@ -8,17 +8,19 @@ from player import ClientMyPlayer
 
 from game_board import GameBoard
 
+from common import *
+
 
 WINDOW_WIDTH = 1100
 WINDOW_HEIGHT = 700
 
-PLAYER_COLORS = {'white': (255, 255, 255), 'black': (0, 0, 0), 'gray': (60, 60, 60),
-                 'brown': (160, 82, 45), 'purple': (128, 0, 128), 'yellow': (204, 204, 0)}
+PLAYER_COLORS = {'blue': LIGHT_BLUE, 'black': BLACK, 'gray': SILVER,
+                 'pink': PINK, 'purple': PURPLE, 'yellow': YELLOW}
 
 
 class OptionGetter:
     """Utility class used to acquire user's game preferences"""
-    max_players = 7
+    max_players = 6
 
     # determines whether the user would like to host a game or join a game
     @classmethod
@@ -33,7 +35,7 @@ class OptionGetter:
     def is_valid_int(cls, user_input):
         try:
             print(user_input)
-            return 1 < int(user_input) < OptionGetter.max_players
+            return 1 < int(user_input) <= OptionGetter.max_players
         except ValueError or TypeError:
             return False
 
@@ -74,7 +76,7 @@ class OptionGetter:
     @classmethod
     def user_and_color(cls):
         username = input('Username: ')
-        color = input('Color (WHITE BLACK PURPLE BROWN GRAY YELLOW): ')
+        color = input('Color (BLACK PURPLE PINK BLUE YELLOW GRAY): ')
         while not OptionGetter.valid_user(username) or OptionGetter.valid_color(color) is None:
             if not OptionGetter.valid_user(username):
                 username = input('Invalid username selection: ').strip()
@@ -112,6 +114,7 @@ class CatanClient(ConnectionListener):
         while not self.accepted_by_server:
             will_host = OptionGetter.hosting_preference()
             game_options = OptionGetter.game_specs()
+            self.num_players = game_options['num_players']
 
             # send the server these options
             self.send({'action': 'check_hosting', 'host': will_host,
@@ -180,8 +183,7 @@ class CatanClient(ConnectionListener):
         if accept_username and accept_color:
             # add the client's own player to the sidebar
             self.accepted_by_server = True
-            self.game_board.player_box.add_player(self.my_player.username,
-                                                  self.my_player.color)
+            self.game_board.sidebar.add_player(self.my_player.username, self.my_player.color)
             pygame.display.set_caption('Settlers of Catan')
         elif accept_username and not accept_color:
             print('Color was already taken by another player')
@@ -193,13 +195,13 @@ class CatanClient(ConnectionListener):
     # the server is informing the client of the players who are already in the game
     def Network_current_players(self, data):
         for player in data['players']:
-            self.game_board.player_box.add_player(player['username'], player['color'])
+            self.game_board.sidebar.add_player(player['username'], player['color'])
             print('I have been informed of {}, who is {}'.format(player['username'],
                                                                  player['color']))
 
     # the server is informing the client of a new player who has joined the game
     def Network_new_player(self, data):
-        self.game_board.player_box.add_player(data['username'], data['color'])
+        self.game_board.sidebar.add_player(data['username'], data['color'])
         print('I have been informed of {}, who is {}'.format(data['username'],
                                                              data['color']))
 
@@ -208,7 +210,7 @@ class CatanClient(ConnectionListener):
         layout = data['layout']
         for item in layout:
             print(item)
-        self.game_board = GameBoard(200, 200, layout, 950, 0)
+        self.game_board = GameBoard(200, 200, layout, self.num_players)
 
     def draw(self, screen):
         self.game_board.draw(screen)
@@ -217,7 +219,7 @@ class CatanClient(ConnectionListener):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit(1)
-        self.game_board.player_box.check_for_mouse(pygame.mouse.get_pos())
+        self.game_board.sidebar.select_player(pygame.mouse.get_pos())
         self.draw(self.screen)
         pygame.display.flip()
 
