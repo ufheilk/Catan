@@ -35,6 +35,12 @@ class Game:
         self.state = GameState.PLAYER_SETUP
         self.cur_player = None  # whose turn is it?
 
+        # for visibility, define the fields which are going to be used only
+        # in the context of the various state functions
+        # used in SETTLEMENT_SETUP:
+        self.select_settlement = True
+        self.second_round = False
+
         self.state_methods = {GameState.PLAYER_SETUP: self.add_player_info}
 
     # handles incoming messages / actions from players
@@ -90,6 +96,29 @@ class Game:
         new_player.send({'action': 'check_user_color', 'accept_username': valid_username,
                          'accept_color': valid_color})
 
+        # this might be the last player to have their info accepted
+        # check if it is time to go to the next state and actually start the game
+        if self.game_ready():
+            self.state = GameState.SETTLEMENT_SETUP
+            # following 2 fields will be used by SETTLEMENT_SETUP's state function
+            self.select_settlement = True
+            self.second_round = False
+            self.cur_player = self.players[0]
+            # tell the first player that they need to select a settlement
+            self.cur_player.send({'action': 'select_settlement'})
+            # tell everyone else to wait
+            self.broadcast_wait()
+
+    # checks if the game is ready to start, i.e. if the game is full and
+    # all players have their username and color
+    def game_ready(self):
+        if self.is_full():
+            for player in self.players:
+                if player.username is None or player.color is None:
+                    return False  # someone hasn't set their user / color
+            return True
+        return False
+
     def is_full(self):
         return self.num_active_players == self.max_num_players
 
@@ -122,3 +151,9 @@ class Game:
             return self.players[self.players.index(self.cur_player)]
         except IndexError:
             return self.players[0]
+
+    # sends the wait message to all players besides the current player
+    def broadcast_wait(self):
+        for player in self.players:
+            if player is not self.cur_player:
+                player.send({'action': 'wait', 'cur_player': self.cur_player.username})

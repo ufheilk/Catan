@@ -17,7 +17,6 @@ class PlayerBox:
         self.large_font_height = get_font_height(large_font)
         self.small_font_height = get_font_height(small_font)
         large_font_width = get_font_width(large_font)
-        small_font_width = get_font_width(small_font)
         box_height = self.large_font_height * (max_num_players + 1) + self.small_font_height * max_num_players * 3
         box_width = large_font_width * chars_per_line
         self.box = NonCenteredRect(background_color, box_height, box_width, x, y)

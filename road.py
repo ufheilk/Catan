@@ -18,6 +18,7 @@ class GameRoad:
     def __init__(self, endpoints):
         self.endpoints = endpoints
         self.color = BLACK
+        self.draw_color = self.color
 
         # where the rect for collision detection gets set up
         if endpoints[0][0] == endpoints[1][0]:
@@ -40,16 +41,19 @@ class GameRoad:
             self.collision_rect.center = (center_x, center_y)
 
     def deselect(self):
-        self.color = self.color
+        self.draw_color = self.color
+
+    def select(self):
+        print('reeeeee')
+        self.draw_color = WHITE
 
     def check_for_mouse(self, mouse_pos):
         if self.collision_rect.collidepoint(mouse_pos):
             # mouse is over this road, make it white
-            self.color = GameRoad.select_color
             return self
         else:
             self.deselect()
             return None
 
     def draw(self, screen):
-        pygame.draw.line(screen, self.color, self.endpoints[0], self.endpoints[1], 5)
+        pygame.draw.line(screen, self.draw_color, self.endpoints[0], self.endpoints[1], 5)

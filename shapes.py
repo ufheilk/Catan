@@ -28,7 +28,6 @@ class NonCenteredRect:
 class Circle:
     """Class representing a pygame circle, to be used for frequency rating"""
     def __init__(self, color, pos, radius):
-        self.regular_color = color
         self.color = color
         # pygame draw will complain if either part of pos is a float
         self.pos = (int(pos[0]), ceil(pos[1]))

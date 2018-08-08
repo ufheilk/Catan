@@ -10,6 +10,8 @@ from game_board import GameBoard
 
 from common import *
 
+from enum import Enum
+
 
 WINDOW_WIDTH = 1100
 WINDOW_HEIGHT = 700
@@ -87,6 +89,14 @@ class OptionGetter:
         return username, PLAYER_COLORS[color.lower()]
 
 
+# the different states that the client can be in
+class GameState(Enum):
+    WAITING_FOR_PLAYERS = 0  # game hasn't started yet
+    WAIT = 1  # waiting on player's turn
+    SELECT_SETTLEMENT = 2  # initial settlement selection
+
+
+# this is the client
 class CatanClient(ConnectionListener):
     """Client for Catan game. Manages all displays"""
     def __init__(self, host='localhost', port=4200):
@@ -99,7 +109,9 @@ class CatanClient(ConnectionListener):
 
         self.my_player = None
 
-        self.other_players = []
+        self.state = GameState.WAITING_FOR_PLAYERS
+
+        self.state_functions = {GameState.SELECT_SETTLEMENT: self.select_settlement}
 
         self.Connect((host, port))
         self.server_response = False
@@ -147,9 +159,7 @@ class CatanClient(ConnectionListener):
                 self.pump()
                 sleep(0.01)
 
-        print('Username and color have been accepted!')
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.screen.fill((100, 100, 250))
         # the user's game specs have been accepted by the server.
         # must wait until the max # of players has been reached
 
@@ -181,6 +191,7 @@ class CatanClient(ConnectionListener):
         accept_username = data['accept_username']
         accept_color = data['accept_color']
         if accept_username and accept_color:
+            print('Username and color have been accepted!')
             # add the client's own player to the sidebar
             self.accepted_by_server = True
             self.game_board.sidebar.add_player(self.my_player.username, self.my_player.color)
@@ -212,14 +223,37 @@ class CatanClient(ConnectionListener):
             print(item)
         self.game_board = GameBoard(200, 200, layout, self.num_players)
 
+    # network signals from here below are those received during actually game-play
+    # and mostly just change the client's state. they are paired w/ the appropriate
+    # state function
+
+    # it is currently another player's turn to do something
+    def Network_wait(self, data):
+        self.state = GameState.WAIT
+        print('Waiting on player {}'.format(data['cur_player']))
+
+    # the player needs to select a settlement in the initial game setup
+    def Network_select_settlement(self, data):
+        self.state = GameState.SELECT_SETTLEMENT
+        print('Please select a settlement')
+
+    def select_settlement(self, mouse_pos):
+        self.game_board.select_hex(mouse_pos)
+
     def draw(self, screen):
         self.game_board.draw(screen)
 
     def update(self):
+        # do all management of key presses / mouse info here
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit(1)
-        self.game_board.sidebar.select_player(pygame.mouse.get_pos())
+        mouse_pos = pygame.mouse.get_pos()
+
+        if self.state != GameState.WAITING_FOR_PLAYERS and self.state != GameState.WAIT:
+            self.state_functions[self.state](mouse_pos)
+
+        self.screen.fill((100, 100, 250))
         self.draw(self.screen)
         pygame.display.flip()
 

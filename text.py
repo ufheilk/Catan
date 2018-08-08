@@ -62,24 +62,22 @@ class HexText(Text):
         self.surface = self.font.render(self.text, True, self.color)
         # change circles back
         for circle in self.circles:
-            circle.color = circle.regular_color
+            circle.color = BLACK
+
+    def select(self):
+        self.surface = self.font.render(self.text, True, WHITE)
+        # must also select circles
+        for circle in self.circles:
+            circle.color = WHITE
 
     # returns self to be drawn at end if the mouse is selecting self
     def check_for_mouse(self, mouse_pos):
         for collision_rect in self.collision_rects:
             if collision_rect.collidepoint(mouse_pos):
-                # the rect is upon us, re-render
-                self.surface = self.font.render(self.text, True, WHITE)
-                # gotta change little circles below text as well
-                for circle in self.circles:
-                    circle.color = WHITE
-                return self
+                return True
             else:
                 self.deselect()
-                return None
-
-    def select(self):
-        self.surface = self.font.render(self.text, True, WHITE)
+                return False
 
     def draw(self, screen):
         super(HexText, self).draw(screen)

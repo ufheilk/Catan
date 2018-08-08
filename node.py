@@ -22,7 +22,6 @@ SETTLEMENT_CIRCLE_RADIUS = 12  # how large a settlement appears on the board
 # for client use. for server node representation see above
 class GameNode:
     """Node class representing a node to be drawn on the screen"""
-    select_color = WHITE
 
     def __init__(self, center):
         self.center = center
@@ -35,9 +34,11 @@ class GameNode:
     def deselect(self):
         self.circle.color = self.color
 
+    def select(self):
+        self.circle.color = WHITE
+
     def check_for_mouse(self, mouse_pos):
         if self.circle.rect.collidepoint(mouse_pos):
-            self.circle.color = GameNode.select_color
             return self
         else:
             self.deselect()

@@ -4,14 +4,14 @@ from math import ceil, sqrt
 from node import Node, GameNode
 from road import Road, GameRoad
 from hex import Hex, HexType, GameHex
-from random import shuffle
+from random import sample
 
 # which nodes are connected by roads
 ROAD_NODES_INDICES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
                       [6, 7], [7, 0], [5, 8], [8, 9], [9, 6], [10, 11],
                       [11, 6], [9, 12], [12, 13], [13, 10], [3, 14],
                       [14, 15], [15, 16], [16, 17], [17, 4], [17, 18],
-                      [18, 19], [8, 19], [8, 9], [19, 20], [20, 21], [22, 13],
+                      [18, 19], [8, 19], [19, 20], [20, 21], [22, 13],
                       [12, 21], [21, 23], [23, 24], [24, 22], [15, 25],
                       [25, 26], [26, 27], [27, 28], [28, 16], [28, 29],
                       [29, 30], [30, 18], [30, 31], [31, 32], [32, 20],
@@ -21,6 +21,7 @@ ROAD_NODES_INDICES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
                       [43, 44], [44, 33], [44, 45], [45, 46], [46, 36],
                       [39, 47], [47, 48], [48, 49], [49, 41], [49, 50],
                       [50, 51], [51, 43], [51, 52], [52, 53], [53, 45]]
+print(len(ROAD_NODES_INDICES))
 
 # describes the nodes relative to each node
 NODE_NEIGHBOR_INDICES = [[1, 5, 7],
@@ -240,7 +241,7 @@ def construct_game_hexes(nodes, nodes_per_hexes):
 def set_hex_frequencies(hexes, randomize):
     layout = DEFAULT_CATAN_LAYOUT
     if randomize:
-        shuffle(layout)
+        layout = sample(layout, len(layout))
         # if the layout is randomized, we must move the non-zero frequency
         # on the cactus tile to the tile that has the 0 frequency
         for hex_type, frequency in zip(layout, DEFAULT_CATAN_FREQUENCIES):
@@ -324,13 +325,35 @@ class GameHexBoard:
         if self.selection is not None:
             self.selection.draw(screen)
 
-    # targets will be self.{nodes, roads, hexes}
-    def select(self, targets):
-        mouse_pos = pygame.mouse.get_pos()
-        for target in targets:
-            ret = target.check_for_mouse(mouse_pos)
-            if ret is not None:
-                self.selection = ret
+    # utility for selection
+    # if the mouse is between 2 items, they will both try to be highlighted
+    # this must be prevented by taking count of all items that think they are selected
+    # and only actually going through with the selection for one of them
+    def select_common(self, category, mouse_pos):
+        selected = []
+        for item in category:
+            selection = item.check_for_mouse(mouse_pos)
+            if selection:
+                selected.append(selection)
+
+        if len(selected) < 2:
+            # either 1 thing selected or none
+            for item in selected:
+                item.select()
+        else:
+            # 2 (possibly more, but I hope this is not possible) possible selections
+            selected[0].select()
+            for item in selected[1:]:
+                item.deselect()
+
+    def select_settlement(self, mouse_pos):
+        return self.select_common(self.nodes, mouse_pos)
+
+    def select_hex(self, mouse_pos):
+        return self.select_common(self.hexes, mouse_pos)
+
+    def select_road(self, mouse_pos):
+        return self.select_common(self.roads, mouse_pos)
 
     def get_selection(self):
         return self.selection

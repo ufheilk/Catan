@@ -25,7 +25,7 @@ class ClientChannel(PodSixNet.Channel.Channel):
 class CatanServer(PodSixNet.Server.Server):
     """Server for hosting games of Catan"""
     channelClass = ClientChannel
-    max_players = 7
+    max_players = 6
 
     def __init__(self, host='localhost', port=4200):
         print('Server started on ' + host + ' : ' + str(port))
@@ -54,7 +54,7 @@ class CatanServer(PodSixNet.Server.Server):
     def check_hosting(self, host, channel, options):
 
         # double check that the client hasn't sent faulty info
-        if not 1 < options['num_players'] < self.max_players:
+        if not 1 < options['num_players'] <= self.max_players:
             channel.Send({'action': 'check_hosting', 'accepted': False, 'game_id': -1})
 
         # always accept a new host, as we can always make a new game

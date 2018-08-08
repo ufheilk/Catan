@@ -180,6 +180,15 @@ class GameBoard:
         self.dice = Dice((dice_x, dice_y))
         self.sidebar = SideBar(num_players)
 
+    def select_settlement(self, mouse_pos):
+        self.hex_board.select_settlement(mouse_pos)
+
+    def select_road(self, mouse_pos):
+        self.hex_board.select_road(mouse_pos)
+
+    def select_hex(self, mouse_pos):
+        self.hex_board.select_hex(mouse_pos)
+
     def draw(self, screen):
         self.hex_board.draw(screen)
         self.dice.draw(screen)

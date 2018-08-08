@@ -64,9 +64,14 @@ class GameHex:
     def deselect(self):
         self.text.deselect()
 
+    def select(self):
+        self.text.select()
+
     def check_for_mouse(self, mouse_pos):
         if self.text is not None:
-            self.text.check_for_mouse(mouse_pos)
+            if self.text.check_for_mouse(mouse_pos):
+                return self
+        return None
 
     def draw(self, screen):
         pygame.draw.polygon(screen, self.color, self.points)
