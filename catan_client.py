@@ -224,8 +224,8 @@ class CatanClient(ConnectionListener):
         self.game_board = GameBoard(200, 200, layout, self.num_players)
 
     # network signals from here below are those received during actually game-play
-    # and mostly just change the client's state. they are paired w/ the appropriate
-    # state function
+    # and mostly just change the client's state or screen. they are paired w/ the
+    # appropriate state function
 
     # it is currently another player's turn to do something
     def Network_wait(self, data):
@@ -237,21 +237,37 @@ class CatanClient(ConnectionListener):
         self.state = GameState.SELECT_SETTLEMENT
         print('Please select a settlement')
 
-    def select_settlement(self, mouse_pos):
-        self.game_board.select_hex(mouse_pos)
+    # a new settlement has been created. update the user's screen
+    def Network_new_settlement(self, data):
+        settlement_index = data['settlement']
+        color = data['color']
+        self.game_board.new_settlement(settlement_index, color)
+
+    # the user needs to select their initial settlements
+    # note: actions on the sidebar cannot be chosen
+    def select_settlement(self, mouse_pos, mouse_click):
+        selection = self.game_board.select_settlement(mouse_pos)
+        if mouse_click and selection is not None:
+            # user has selected a settlement, send selection to server
+            self.send({'action': 'select_settlement', 'settlement': selection})
 
     def draw(self, screen):
         self.game_board.draw(screen)
 
     def update(self):
         # do all management of key presses / mouse info here
+        mouse_click = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit(1)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                # mouse has been clicked!
+                mouse_click = True
+
         mouse_pos = pygame.mouse.get_pos()
 
         if self.state != GameState.WAITING_FOR_PLAYERS and self.state != GameState.WAIT:
-            self.state_functions[self.state](mouse_pos)
+            self.state_functions[self.state](mouse_pos, mouse_click)
 
         self.screen.fill((100, 100, 250))
         self.draw(self.screen)

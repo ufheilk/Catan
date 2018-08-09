@@ -19,7 +19,13 @@ class ClientChannel(PodSixNet.Channel.Channel):
     def Network_user_color_selection(self, data):
         channel = self
         game_id = data['game_id']
-        self._server.check_user_color(channel, game_id, data)
+        self._server.delegate_to_game(channel, game_id, 'check_user_color', data)
+
+    # the user wants to select an initial settlement
+    def Network_select_settlement(self, data):
+        channel = self
+        game_id = data['game_id']
+        self._server.delegate_to_game(channel, game_id, 'select_settlement', data)
 
 
 class CatanServer(PodSixNet.Server.Server):
@@ -86,6 +92,14 @@ class CatanServer(PodSixNet.Server.Server):
         game = self.games[game_id]
         game.handle_network(channel, 'check_user_color', data)
 
+    # to handle user input when the game has already been set up
+    def delegate_to_game(self, channel, game_id, action, data):
+        try:
+            game = self.games[game_id]
+            game.handle_network(channel, action, data)
+        except IndexError:
+            # the user sent a faulty game id, so ignore this
+            return
 
 if __name__ == '__main__':
     server = CatanServer()

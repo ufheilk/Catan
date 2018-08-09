@@ -29,7 +29,8 @@ class GameNode:
         self.circle = Circle(None, self.center, SETTLEMENT_CIRCLE_RADIUS)
 
     def settle(self, color):
-        self.circle = Circle(color, self.center, SETTLEMENT_CIRCLE_RADIUS)
+        self.color = color
+        self.circle.color = color
 
     def deselect(self):
         self.circle.color = self.color

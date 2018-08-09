@@ -181,13 +181,17 @@ class GameBoard:
         self.sidebar = SideBar(num_players)
 
     def select_settlement(self, mouse_pos):
-        self.hex_board.select_settlement(mouse_pos)
+        return self.hex_board.select_settlement(mouse_pos)
 
     def select_road(self, mouse_pos):
-        self.hex_board.select_road(mouse_pos)
+        return self.hex_board.select_road(mouse_pos)
 
     def select_hex(self, mouse_pos):
-        self.hex_board.select_hex(mouse_pos)
+        return self.hex_board.select_hex(mouse_pos)
+
+    # color the node representing a new settlement
+    def new_settlement(self, settlement_index, color):
+        self.hex_board.nodes[settlement_index].settle(color)
 
     def draw(self, screen):
         self.hex_board.draw(screen)

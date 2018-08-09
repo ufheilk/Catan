@@ -5,6 +5,7 @@ from node import Node, GameNode
 from road import Road, GameRoad
 from hex import Hex, HexType, GameHex
 from random import sample
+from player import ServerPlayer
 
 # which nodes are connected by roads
 ROAD_NODES_INDICES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
@@ -307,6 +308,31 @@ class HexBoard:
             serial_types.append(hx.type.value)
         return serial_types
 
+    # checks if the settlement selection (node_index) is
+    # 1) not already taken
+    # 2) not adjacent to another existing settlement
+    def valid_settlement(self, node_index):
+        try:
+            node = self.nodes[node_index]
+        except IndexError:
+            # user has sent a bad node_index
+            return False
+        if node.owner is None:
+            valid = True
+            for neighbor in node.neighbors:
+                if neighbor.owner is not None:
+                    valid = False
+            return valid
+        return False
+
+    # make the player the new owner of the node given by node_index
+    def settle(self, node_index, player):
+        try:
+            node = self.nodes[node_index]
+            node.owner = player
+        except IndexError:
+            # user sent a bad node_index, do nothing
+            return
 
 class GameHexBoard:
     def __init__(self, start_x, start_y, layout):
@@ -318,10 +344,10 @@ class GameHexBoard:
     def draw(self, screen):
         for hx in self.hexes:
             hx.draw(screen)
-        for node in self.nodes:
-            node.draw(screen)
         for road in self.roads:
             road.draw(screen)
+        for node in self.nodes:
+            node.draw(screen)
         if self.selection is not None:
             self.selection.draw(screen)
 
@@ -346,14 +372,29 @@ class GameHexBoard:
             for item in selected[1:]:
                 item.deselect()
 
+        # return the selection
+        try:
+            return selected[0]
+        except IndexError:
+            return None
+
     def select_settlement(self, mouse_pos):
-        return self.select_common(self.nodes, mouse_pos)
+        selection = self.select_common(self.nodes, mouse_pos)
+        if selection:
+            # get index so the node can be communicated to the server
+            return self.nodes.index(selection)
 
     def select_hex(self, mouse_pos):
-        return self.select_common(self.hexes, mouse_pos)
+        selection = self.select_common(self.hexes, mouse_pos)
+        if selection:
+            # get index so the hex can be communicated to the server
+            return self.hexes.index(selection)
 
     def select_road(self, mouse_pos):
-        return self.select_common(self.roads, mouse_pos)
+        selection = self.select_common(self.roads, mouse_pos)
+        if selection:
+            # get index so the road can be communicated to the server
+            return self.roads.index(selection)
 
     def get_selection(self):
         return self.selection

@@ -44,7 +44,6 @@ class GameRoad:
         self.draw_color = self.color
 
     def select(self):
-        print('reeeeee')
         self.draw_color = WHITE
 
     def check_for_mouse(self, mouse_pos):

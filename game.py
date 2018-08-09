@@ -38,10 +38,11 @@ class Game:
         # for visibility, define the fields which are going to be used only
         # in the context of the various state functions
         # used in SETTLEMENT_SETUP:
-        self.select_settlement = True
-        self.second_round = False
+        self.select_settlement = None
+        self.second_round = None
 
-        self.state_methods = {GameState.PLAYER_SETUP: self.add_player_info}
+        self.state_methods = {GameState.PLAYER_SETUP: self.add_player_info,
+                              GameState.SETTLEMENT_SETUP: self.initial_setup}
 
     # handles incoming messages / actions from players
     def handle_network(self, channel, action_name, data):
@@ -56,6 +57,8 @@ class Game:
 
         # now actually add the player
         self.players.append(ServerPlayer(player_channel))
+
+    # following methods are called based on the game state
 
     # to add player username and color info
     # called when in the PLAYER_SETUP state
@@ -109,6 +112,23 @@ class Game:
             # tell everyone else to wait
             self.broadcast_wait()
 
+    # handles users' initial settlement and road setup
+    # called when in the SETTLEMENT_SETUP state
+    def initial_setup(self, player, action, data):
+        if player is self.cur_player:
+            if action == 'select_settlement' and self.select_settlement:
+                # user is correctly trying to select a first / second settlement
+                try:
+                    settlement_index = data['settlement']
+                except KeyError:
+                    # user sent a faulty message, ignore
+                    return
+                if self.hex_board.valid_settlement(settlement_index):
+                    # valid settlement selection, update record and notify players
+                    print('VALID SELECTION')
+                    self.hex_board.settle(settlement_index, player)
+                    self.new_settlement(settlement_index, player)
+
     # checks if the game is ready to start, i.e. if the game is full and
     # all players have their username and color
     def game_ready(self):
@@ -157,3 +177,9 @@ class Game:
         for player in self.players:
             if player is not self.cur_player:
                 player.send({'action': 'wait', 'cur_player': self.cur_player.username})
+
+    # update the clients on a new settlement
+    def new_settlement(self, settlement, owner):
+        for player in self.players:
+            player.send({'action': 'new_settlement', 'settlement': settlement,
+                         'color': owner.color})
