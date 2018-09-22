@@ -94,6 +94,7 @@ class GameState(Enum):
     WAITING_FOR_PLAYERS = 0  # game hasn't started yet
     WAIT = 1  # waiting on player's turn
     SELECT_SETTLEMENT = 2  # initial settlement selection
+    SELECT_ROAD = 3 # initial road selection
 
 
 # this is the client
@@ -111,7 +112,8 @@ class CatanClient(ConnectionListener):
 
         self.state = GameState.WAITING_FOR_PLAYERS
 
-        self.state_functions = {GameState.SELECT_SETTLEMENT: self.select_settlement}
+        self.state_functions = {GameState.SELECT_SETTLEMENT: self.select_settlement,
+                                GameState.SELECT_ROAD: self.select_road}
 
         self.Connect((host, port))
         self.server_response = False
@@ -243,6 +245,21 @@ class CatanClient(ConnectionListener):
         color = data['color']
         self.game_board.new_settlement(settlement_index, color)
 
+    # a new road has been created, update the user's screen
+    def Network_new_road(self, data):
+        road_index = data['road']
+        color = data['color']
+        self.game_board.new_road(road_index, color)
+
+    # user now needs to select a road
+    def Network_select_road(self, data):
+        self.state = GameState.SELECT_ROAD
+        print('Please select a road')
+
+    # when the server yells at the client for being bad
+    def Network_invalid(self, data):
+        print('Invalid {} selection, please try again'.format(data['message']))
+
     # the user needs to select their initial settlements
     # note: actions on the sidebar cannot be chosen
     def select_settlement(self, mouse_pos, mouse_click):
@@ -250,6 +267,14 @@ class CatanClient(ConnectionListener):
         if mouse_click and selection is not None:
             # user has selected a settlement, send selection to server
             self.send({'action': 'select_settlement', 'settlement': selection})
+
+    # the user needs to select their initial roads
+    # note: actions on sidebar cannot be chosen
+    def select_road(self, mouse_pos, mouse_click):
+        selection = self.game_board.select_road(mouse_pos)
+        if mouse_click and selection is not None:
+            # user has selected a road, send selection to server
+            self.send({'action': 'select_road', 'road': selection})
 
     def draw(self, screen):
         self.game_board.draw(screen)

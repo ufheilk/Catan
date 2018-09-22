@@ -193,6 +193,11 @@ class GameBoard:
     def new_settlement(self, settlement_index, color):
         self.hex_board.nodes[settlement_index].settle(color)
 
+    # color the road representing a new road
+    def new_road(self, road_index, color):
+        self.hex_board.roads[road_index].color = color
+        self.hex_board.roads[road_index].draw_color = color
+
     def draw(self, screen):
         self.hex_board.draw(screen)
         self.dice.draw(screen)

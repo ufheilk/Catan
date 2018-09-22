@@ -325,6 +325,29 @@ class HexBoard:
             return valid
         return False
 
+    # checks if the road selection (road_index) is
+    # 1) not already taken
+    # 2) adjacent to one of the player's settlements
+    # 3) adjacent to a node that is adjacent to another one of the player's road,
+    # but only if that node is not owned by a different player
+    def valid_road(self, road_index, player):
+        try:
+            road = self.roads[road_index]
+        except IndexError:
+            # user has sent bad road_index
+            return False
+        if road.owner is None:
+            for node in road.nodes:
+                if node.owner is player:
+                    # the player has an adjacent settlement -> good
+                    return True
+                elif node.owner is None:
+                    # check roads adjacent to the road's nodes
+                    for other_road in node.roads:
+                        if other_road.owner is player:
+                            return True
+        return False
+
     # make the player the new owner of the node given by node_index
     def settle(self, node_index, player):
         try:
@@ -333,6 +356,10 @@ class HexBoard:
         except IndexError:
             # user sent a bad node_index, do nothing
             return
+
+    def set_road(self, road_index, player):
+        self.roads[road_index].owner = player
+
 
 class GameHexBoard:
     def __init__(self, start_x, start_y, layout):

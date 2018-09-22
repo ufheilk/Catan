@@ -2,6 +2,7 @@ from hex_board import HexBoard
 from enum import Enum
 from player import ServerPlayer
 
+from time import sleep
 
 # represents the different states that the game can be in
 class GameState(Enum):
@@ -117,7 +118,7 @@ class Game:
     def initial_setup(self, player, action, data):
         if player is self.cur_player:
             if action == 'select_settlement' and self.select_settlement:
-                # user is correctly trying to select a first / second settlement
+                # user is trying to select a first / second settlement
                 try:
                     settlement_index = data['settlement']
                 except KeyError:
@@ -125,9 +126,45 @@ class Game:
                     return
                 if self.hex_board.valid_settlement(settlement_index):
                     # valid settlement selection, update record and notify players
-                    print('VALID SELECTION')
                     self.hex_board.settle(settlement_index, player)
                     self.new_settlement(settlement_index, player)
+                    # change client state
+                    player.send({'action': 'select_road'})
+                    self.select_settlement = False
+                else:
+                    # user is apparently unable to select a correct settlement
+                    player.send({'action': 'invalid', 'message': 'settlement'})
+            elif action == 'select_road' and not self.select_settlement:
+                # the user is trying to select a road
+                try:
+                    road_index = data['road']
+                except KeyError:
+                    # user sent a faulty message, ignore
+                    return
+                if self.hex_board.valid_road(road_index, player):
+                    # the player has managed, against all odds, to pick a road
+                    self.hex_board.set_road(road_index, player)
+                    self.new_road(road_index, player)
+
+                    # if this was the last player in the list and we have already
+                    # gone through this process once, move to the next stage of the
+                    # game (i.e. actual turns)
+                    self.cur_player = self.get_next_player()
+                    self.select_settlement = True
+                    if player is self.players[-1]:
+                        if self.second_round:
+                            # start the real game
+                            self.state = GameState.NEW_TURN
+
+                        else:
+                            # go around again picking settlements / roads
+                            self.second_round = True
+                            self.cur_player.send({'action': 'select_settlement'})
+                    else:
+                        self.broadcast_wait()
+                        self.cur_player.send({'action': 'select_settlement'})
+                else:
+                    player.send({'action': 'invalid', 'message': 'road'})
 
     # checks if the game is ready to start, i.e. if the game is full and
     # all players have their username and color
@@ -168,7 +205,7 @@ class Game:
     # of, so go back to the beginning
     def get_next_player(self):
         try:
-            return self.players[self.players.index(self.cur_player)]
+            return self.players[self.players.index(self.cur_player) + 1]
         except IndexError:
             return self.players[0]
 
@@ -178,8 +215,17 @@ class Game:
             if player is not self.cur_player:
                 player.send({'action': 'wait', 'cur_player': self.cur_player.username})
 
+    # rolls the dice, updating resources and sending the me
+    def roll(self):
+        pass
+
     # update the clients on a new settlement
     def new_settlement(self, settlement, owner):
         for player in self.players:
             player.send({'action': 'new_settlement', 'settlement': settlement,
                          'color': owner.color})
+
+    # update the clients on a new road
+    def new_road(self, road, owner):
+        for player in self.players:
+            player.send({'action': 'new_road', 'road': road, 'color': owner.color})

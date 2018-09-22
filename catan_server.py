@@ -27,6 +27,12 @@ class ClientChannel(PodSixNet.Channel.Channel):
         game_id = data['game_id']
         self._server.delegate_to_game(channel, game_id, 'select_settlement', data)
 
+    # the user wants to select an initial road
+    def Network_select_road(self, data):
+        channel = self
+        game_id = data['game_id']
+        self._server.delegate_to_game(channel, game_id, 'select_road', data)
+
 
 class CatanServer(PodSixNet.Server.Server):
     """Server for hosting games of Catan"""
@@ -100,6 +106,7 @@ class CatanServer(PodSixNet.Server.Server):
         except IndexError:
             # the user sent a faulty game id, so ignore this
             return
+
 
 if __name__ == '__main__':
     server = CatanServer()
