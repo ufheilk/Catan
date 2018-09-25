@@ -1,12 +1,13 @@
 import pygame
 
-from hex_board import GameHexBoard
-from die import Dice
-from player import OtherPlayerView
 from common import *
-from text import SelectableText, get_font_height, get_font_width
+from die import Dice
+from hex_board import GameHexBoard
+from player import OtherPlayerView
 from shapes import NonCenteredRect
+from text import SelectableText, get_font_height, get_font_width
 
+pygame.init()
 
 class SideBar:
     """All the info to be displayed at the side of the screen"""

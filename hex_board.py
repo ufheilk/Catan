@@ -22,7 +22,6 @@ ROAD_NODES_INDICES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
                       [43, 44], [44, 33], [44, 45], [45, 46], [46, 36],
                       [39, 47], [47, 48], [48, 49], [49, 41], [49, 50],
                       [50, 51], [51, 43], [51, 52], [52, 53], [53, 45]]
-print(len(ROAD_NODES_INDICES))
 
 # describes the nodes relative to each node
 NODE_NEIGHBOR_INDICES = [[1, 5, 7],
