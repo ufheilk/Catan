@@ -94,7 +94,7 @@ class GameState(Enum):
     WAITING_FOR_PLAYERS = 0  # game hasn't started yet
     WAIT = 1  # waiting on player's turn
     SELECT_SETTLEMENT = 2  # initial settlement selection
-    SELECT_ROAD = 3 # initial road selection
+    SELECT_ROAD = 3  # initial road selection
 
 
 # this is the client

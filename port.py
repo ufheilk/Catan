@@ -1,4 +1,3 @@
-from enum import Enum
 import math
 import pygame
 
@@ -9,15 +8,6 @@ from text import Text, get_font_width, get_font_height
 pygame.init()
 pygame.font.init()
 
-
-class Resource(Enum):
-    """The types of resources that can be traded at a port"""
-    FOREST = DARK_GREEN
-    SHEEP = LIGHT_GREEN
-    WHEAT = GOLDENROD
-    MOUNTAIN = SLATE_GRAY
-    REDDISH_ORANGE = ORANGE_RED
-    ANY_RESOURCE = BLACK
 
 
 class PortRect(Rect):
@@ -132,7 +122,7 @@ WINDOW_HEIGHT = 500
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
 screen.fill((100, 100, 250))
-port = Port((100, 100), (250, 100), math.radians(45), math.radians(180), 300, 300, Resource.WHEAT)
+port = Port((100, 100), (250, 100), math.radians(45), math.radians(180), 300, 300, PortResource.WHEAT)
 
 while True:
     for event in pygame.event.get():
