@@ -1,7 +1,7 @@
 from common import *
 import pygame
 from math import ceil, sqrt
-
+import pygame.gfxdraw
 
 class Rect:
     """Class to represent rectangle objects to be drawn"""
@@ -38,6 +38,26 @@ class Circle:
     def draw(self, screen):
         if self.color is not None:
             pygame.draw.circle(screen, self.color, self.pos, self.radius)
+
+
+class Triangle:
+    """~t r i a n g l e ( s p e c i f i c a l l y , e q u i l a t e r a l )~"""
+
+    # radius, as in the distance from the center to one of the vertices
+    def __init__(self, x, y, radius, color, pointed_up=True):
+        if pointed_up:
+            self.points = [(x, y - radius), (x - int(radius * sqrt(3)/2), y + int(radius / 2)),
+                           (x + int(radius * sqrt(3)/2), y + int(radius / 2))]
+        else:
+            self.points = [(x - int(radius * sqrt(3)/2), y - int(radius / 2)),
+                           (x + int(radius * sqrt(3)/2), y - int(radius / 2)), (x, y + radius)]
+
+        self.color = color
+
+    def draw(self, screen):
+        pygame.gfxdraw.aapolygon(screen, self.points, self.color)
+        pygame.gfxdraw.filled_polygon(screen, self.points, self.color)
+
 
 
 
