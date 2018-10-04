@@ -73,8 +73,6 @@ class ResourceCounter:
                            int(y + ResourceCounter.font_y_offset * font_height))
         self.num.rect.center = self.num_center
 
-        print('My center is at: ' + str(self.num_center))
-
         # arrow initialization
         arrow_size = int(font_height * ResourceCounter.arrow_size_modifier)
         arrow_offset = int(font_height/2 + font_height * ResourceCounter.arrow_separation)
@@ -185,27 +183,22 @@ class ResourceSelector:
     """Graphical interface for user to select some number of the five types
     of resources"""
 
-    box_separation = 0.5  # boxes separated by half their size
+    counter_separation = 1.5  # separate counters so they don't overlap
 
-    def __init__(self, x, y, box_size):
-        self.resource_boxes = []
-        # have a resource box for each of the five resource
-        cur_x = x - 2 * box_size - 2 * ResourceSelector.box_separation * box_size
+    def __init__(self, x, y, font):
+        font_width = get_font_width(font)
+        self.counters = []
+        # have a counter for each of the five resource
+        cur_x = x - 2 * font_width - 2 * ResourceSelector.counter_separation * font_width
         for resource in common.Resource:
-            self.resource_boxes.append(ResourceBox(cur_x, y, box_size, resource))
-            cur_x += box_size + ResourceSelector.box_separation * box_size
+            self.counters.append(ResourceCounter(cur_x, y, resource, font))
+            cur_x += font_width + ResourceSelector.counter_separation * font_width
 
         self.current_selection = None  # resource user clicked on last
 
     def check_for_mouse(self, mouse_pos, mouse_clicked):
-        for box in self.resource_boxes:
-            selection = box.check_for_mouse(mouse_pos)
-            if selection:
-                selection.select()
-                if mouse_clicked:
-                    self.current_selection = box
-            elif box is not self.current_selection:
-                box.deselect()
+        for counter in self.counters:
+            counter.check_for_mouse(mouse_pos, mouse_clicked)
 
     # returns what the user has selected
     # if nothing selected: None
@@ -214,8 +207,9 @@ class ResourceSelector:
             return self.current_selection.resource
 
     def draw(self, screen):
-        for box in self.resource_boxes:
-            box.draw(screen)
+        for counter in self.counters:
+            counter.draw(screen)
+
 
 class TextRect(Rect):
     """A colored rectangle with centered text in it. That's it."""
