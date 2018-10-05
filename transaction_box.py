@@ -1,6 +1,7 @@
 # classes for a variety of "dialog" boxes in which the user
 # has to select a resource, or some number of resources,
 # which is required for some step of the game
+from enum import Enum
 import pygame
 
 import common
@@ -188,23 +189,20 @@ class ResourceSelector:
     def __init__(self, x, y, font):
         font_width = get_font_width(font)
         self.counters = []
+
         # have a counter for each of the five resource
         cur_x = x - 2 * font_width - 2 * ResourceSelector.counter_separation * font_width
         for resource in common.Resource:
             self.counters.append(ResourceCounter(cur_x, y, resource, font))
             cur_x += font_width + ResourceSelector.counter_separation * font_width
 
-        self.current_selection = None  # resource user clicked on last
-
     def check_for_mouse(self, mouse_pos, mouse_clicked):
         for counter in self.counters:
             counter.check_for_mouse(mouse_pos, mouse_clicked)
 
-    # returns what the user has selected
-    # if nothing selected: None
+    # returns how many of each resource the user has picked
     def get_result(self):
-        if self.current_selection:
-            return self.current_selection.resource
+        return {counter.resource: int(counter.num.text) for counter in self.counters}
 
     def draw(self, screen):
         for counter in self.counters:
@@ -228,6 +226,12 @@ class TextRect(Rect):
     def draw(self, screen):
         super().draw(screen)
         self.text.draw(screen)
+
+
+class TBoxState(Enum):
+    OK = 0
+    CANCEL = 1
+    CONTINUE = 2
 
 
 class TBox(Rect):
@@ -254,39 +258,60 @@ class TBox(Rect):
     lone_ok_box_x_offset = width / 2  # if there is no cancel button
     cancel_box_x_offset = width * 2/3
 
+    error_text_color = common.BLACK
+    error_text_y_offset = height * 7/10
+
     def __init__(self, x, y, prompt, allow_cancel):
         super().__init__(TBox.color, TBox.height, TBox.width, (x, y))
 
-        font = pygame.font.Font(TBox.font_type, TBox.font_size)
+        self.x = x
+
+        self.font = pygame.font.Font(TBox.font_type, TBox.font_size)
 
         # setup prompt
-        prompt_width = get_font_width(font) * len(prompt)
+        prompt_width = get_font_width(self.font) * len(prompt)
         self.prompt = TextRect(x, self.rect.y + TBox.prompt_box_offset, prompt_width,
-                               TBox.prompt_box_height, prompt, font)
+                               TBox.prompt_box_height, prompt, self.font)
 
         # setup response buttons
         if allow_cancel:
             self.ok = TextRect(self.rect.left + TBox.ok_box_x_offset,
                                self.rect.top + TBox.response_box_y_offset,
                                TBox.response_box_width, TBox.response_box_height,
-                               'OK', font)
+                               'OK', self.font)
             self.cancel = TextRect(self.rect.left + TBox.cancel_box_x_offset,
                                    self.rect.top + TBox.response_box_y_offset,
                                    TBox.response_box_width, TBox.response_box_height,
-                                   'CANCEL', font)
+                                   'CANCEL', self.font)
         else:
             self.ok = TextRect(self.rect.left + TBox.lone_ok_box_x_offset,
                                self.rect.top + TBox.response_box_y_offset,
                                TBox.response_box_width, TBox.response_box_height,
-                               'OK', font)
+                               'OK', self.font)
             self.cancel = None
 
-    def check_for_mouse(self, mouse_pos):
+        # text for if the user does something bad and should be scolded
+        self.error_text = None
+
+    def check_for_mouse(self, mouse_pos, mouse_click):
+        """Checks if the mouse is over any of the response buttons. Additionally
+        checks for mouse click and will return what the user is trying to do"""
         if self.ok.text.check_for_mouse(mouse_pos):
             self.ok.text.select()
-        if self.cancel:
+            if mouse_click:
+                return TBoxState.OK
+        elif self.cancel:
             if self.cancel.text.check_for_mouse(mouse_pos):
                 self.cancel.text.select()
+
+                if mouse_click:
+                    return TBoxState.CANCEL
+
+        return TBoxState.CONTINUE
+
+    def error(self, text):
+        self.error_text = SelectableText(self.font, text, TBox.error_text_color, 0, 0)
+        self.error_text.rect.center = (self.x, self.rect.y + TBox.error_text_y_offset)
 
     def draw(self, screen):
         super().draw(screen)
@@ -294,3 +319,39 @@ class TBox(Rect):
         self.ok.draw(screen)
         if self.cancel:
             self.cancel.draw(screen)
+        if self.error_text:
+            self.error_text.draw(screen)
+
+
+class SingleResourceBox(TBox):
+    """TBox which asks you to pick a single resource. Used both for monopoly
+    and year of plenty development cards"""
+
+    r_box_size = 40  # size of the resource boxes
+
+    def __init__(self, x, y, prompt):
+        super().__init__(x, y, prompt, allow_cancel=True)
+
+        self.picker = ResourcePicker(x, y, SingleResourceBox.r_box_size)
+
+    def check_for_mouse(self, mouse_pos, mouse_click):
+        self.picker.check_for_mouse(mouse_pos, mouse_click)
+        box_state = super().check_for_mouse(mouse_pos, mouse_click)
+
+        if box_state == TBoxState.CONTINUE:
+            pass  # user is still deciding
+        elif box_state == TBoxState.CANCEL:
+            print('*teleports behind you* nothin\' personnel... kid')
+        elif box_state == TBoxState.OK:
+            # ensure the user has selected something
+            user_selection = self.picker.get_result()
+            if user_selection:
+                print('user has chosen: ' + str(user_selection))
+            else:
+                self.error('You must choose a resource')
+
+
+
+    def draw(self, screen):
+        super().draw(screen)
+        self.picker.draw(screen)
