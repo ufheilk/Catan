@@ -196,9 +196,9 @@ class ResourceSelector:
             self.counters.append(ResourceCounter(cur_x, y, resource, font))
             cur_x += font_width + ResourceSelector.counter_separation * font_width
 
-    def check_for_mouse(self, mouse_pos, mouse_clicked):
+    def check_for_mouse(self, mouse_pos, mouse_click):
         for counter in self.counters:
-            counter.check_for_mouse(mouse_pos, mouse_clicked)
+            counter.check_for_mouse(mouse_pos, mouse_click)
 
     # returns how many of each resource the user has picked
     def get_result(self):
@@ -350,8 +350,76 @@ class SingleResourceBox(TBox):
             else:
                 self.error('You must choose a resource')
 
+    def draw(self, screen):
+        super().draw(screen)
+        self.picker.draw(screen)
+
+
+class SingleCounterBox(TBox):
+    """TBox which asks for the user to specify a number of each
+    resource. Used for when the player must give up cards to the robber"""
+
+    counter_font = 'graph-35.ttf'
+    counter_font_size = 30
+
+    def __init__(self, x, y, prompt):
+        super().__init__(x, y, prompt, False)
+        font = pygame.font.Font(SingleCounterBox.counter_font,
+                                SingleCounterBox.counter_font_size)
+
+        self.selector = ResourceSelector(x, y, font)
+
+    def check_for_mouse(self, mouse_pos, mouse_click):
+        self.selector.check_for_mouse(mouse_pos, mouse_click)
+        box_state = super().check_for_mouse(mouse_pos, mouse_click)
+
+        if box_state == TBoxState.OK:
+            return self.selector.get_result()
+        elif box_state == TBoxState.CANCEL:
+            pass
+
+    def draw(self, screen):
+        super().draw(screen)
+        self.selector.draw(screen)
+
+
+class MultiCounterBox(TBox):
+    """Asks user to select two different sets of different numbers of the
+    five resources. Used when trading with another player, the bank, or the port"""
+
+    counter_font = 'graph-35.ttf'
+    counter_font_size = 20
+
+    counter_offset = 0.35
+    
+    def __init__(self, x, y, prompt):
+        super().__init__(x, y, prompt, True)
+
+        font = pygame.font.Font(MultiCounterBox.counter_font,
+                                MultiCounterBox.counter_font_size)
+
+        # center the two selectors at each side of the box
+        left_x = x - self.height * MultiCounterBox.counter_offset
+        right_x = x + self.height * MultiCounterBox.counter_offset
+        self.left_selector = ResourceSelector(left_x, y, font)
+        self.right_selector = ResourceSelector(right_x, y, font)
+
+    def check_for_mouse(self, mouse_pos, mouse_click):
+        self.left_selector.check_for_mouse(mouse_pos, mouse_click)
+        self.right_selector.check_for_mouse(mouse_pos, mouse_click)
+
+        box_state = super().check_for_mouse(mouse_pos, mouse_click)
+
+        if box_state == TBoxState.OK:
+            print(self.left_selector.get_result())
+            print(self.right_selector.get_result())
+        elif box_state == TBoxState.CANCEL:
+            print('nothin\' personnel...')
 
 
     def draw(self, screen):
         super().draw(screen)
-        self.picker.draw(screen)
+        self.left_selector.draw(screen)
+        self.right_selector.draw(screen)
+
+# THE BELOW ARE ALL CHILD CLASSES THAT WILL ACTUALLY BE USED IN-GAME
