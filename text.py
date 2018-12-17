@@ -13,6 +13,10 @@ class Text:
         # center the text on x, y
         self.rect = self.surface.get_rect()
 
+    # re-render the text (for when it changes)
+    def render(self):
+        self.surface = font.render(self.text, True, self.color)
+
     def draw(self, screen):
         screen.blit(self.surface, self.rect)
 

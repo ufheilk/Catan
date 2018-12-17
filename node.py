@@ -7,6 +7,7 @@ class Node:
         self.owner = None
         self.neighbors = []
         self.roads = []
+        self.hexes = []
         self.city = False
 
     def add_neighbor(self, neighbor):
@@ -14,6 +15,9 @@ class Node:
 
     def add_road(self, road):
         self.roads.append(road)
+
+    def add_hex(self, new_hex):
+        self.hexes.append(new_hex)
 
 
 SETTLEMENT_CIRCLE_RADIUS = 12  # how large a settlement appears on the board

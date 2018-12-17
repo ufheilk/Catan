@@ -222,7 +222,11 @@ def construct_hexes(nodes, nodes_per_hexes):
         for node_index in node_indices:
             nodes_in_hex.append(nodes[node_index])
         # all of the Nodes making up the Hex are now assembling. make the Hex
-        hexes.append(Hex(nodes_in_hex))
+        new_hex = Hex(nodes_in_hex)
+        hexes.append(new_hex)
+        # let nodes know which hexes they are vertices of
+        for node in nodes_in_hex:
+            node.add_hex(new_hex)
     return hexes
 
 
@@ -430,5 +434,7 @@ class GameHexBoard:
         self.selection.deselect()
         self.selection = None
 
-
-
+    # returns the x coordinate of the center of the hex board
+    def center_x(self):
+        # the 8th node of the hex board is at the center-top, hence why it is being used here
+        return self.nodes[7].center[0]

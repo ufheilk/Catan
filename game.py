@@ -1,8 +1,10 @@
 from hex_board import HexBoard
 from enum import Enum
 from player import ServerPlayer
+from hex import HexType
 
 from time import sleep
+import random
 
 # represents the different states that the game can be in
 class GameState(Enum):
@@ -13,8 +15,9 @@ class GameState(Enum):
     GET_TILE = 4
     GET_PLAYER = 5
     PLAYER_TURN = 6
-    TRADE_MESSAGE = 7
-    END_GAME = 8
+    ROLL_DICE = 7
+    TRADE_MESSAGE = 8
+    END_GAME = 9
 
 
 # each game will depend on the specifications of the initial host
@@ -26,7 +29,7 @@ class Game:
 
         self.randomize = randomize
 
-        # number of players currently connected to this game (start w/ just host)
+        # number of players currently connected to this game
         self.num_active_players = 0
         # mechanism to access all players connected to this game
         self.players = []
@@ -42,8 +45,13 @@ class Game:
         self.select_settlement = None
         self.second_round = None
 
+        # used in PLAYER_TURN
+        self.finish_dice_roll = False
+
         self.state_methods = {GameState.PLAYER_SETUP: self.add_player_info,
-                              GameState.SETTLEMENT_SETUP: self.initial_setup}
+                              GameState.SETTLEMENT_SETUP: self.initial_setup,
+                              GameState.PLAYER_TURN: self.player_turn,
+                              GameState.ROLL_DICE: self.roll_dice}
 
     # handles incoming messages / actions from players
     def handle_network(self, channel, action_name, data):
@@ -126,6 +134,13 @@ class Game:
                     return
                 if self.hex_board.valid_settlement(settlement_index):
                     # valid settlement selection, update record and notify players
+
+                    # per Catan rules give the player one of each resource
+                    # their selected node borders
+                    selected_node = self.hex_board.nodes[settlement_index]
+                    player.modify_resources(self.resources_around_node(selected_node))
+                    print(player.resources)
+
                     self.hex_board.settle(settlement_index, player)
                     self.new_settlement(settlement_index, player)
                     # change client state
@@ -142,7 +157,7 @@ class Game:
                     # user sent a faulty message, ignore
                     return
                 if self.hex_board.valid_road(road_index, player):
-                    # the player has managed, against all odds, to pick a road
+                    # the player has managed, against all odds, to pick a road correctly
                     self.hex_board.set_road(road_index, player)
                     self.new_road(road_index, player)
 
@@ -153,8 +168,9 @@ class Game:
                     self.select_settlement = True
                     if player is self.players[-1]:
                         if self.second_round:
-                            # start the real game
-                            self.state = GameState.NEW_TURN
+                            # CHANGE STATE -- PLAYER_TURN
+                            self.state = GameState.ROLL_DICE
+                            self.broadcast_roll_dice(self.cur_player.username)
 
                         else:
                             # go around again picking settlements / roads
@@ -165,6 +181,18 @@ class Game:
                         self.cur_player.send({'action': 'select_settlement'})
                 else:
                     player.send({'action': 'invalid', 'message': 'road'})
+
+
+    # GAME STATE
+    # waiting for the current player to stop the dice from rolling
+    def roll_dice(self, player, action, data):
+        if player is self.cur_player:
+            left = random.randint(0, 6)
+            right = random.randint(0, 6)
+            self.broadcast_dice_result(left, right) 
+
+    def player_turn(self, player, action, data):
+        pass
 
     # checks if the game is ready to start, i.e. if the game is full and
     # all players have their username and color
@@ -215,9 +243,43 @@ class Game:
             if player is not self.cur_player:
                 player.send({'action': 'wait', 'cur_player': self.cur_player.username})
 
-    # rolls the dice, updating resources and sending the me
-    def roll(self):
-        pass
+
+    # announce that the dice should begin rolling animation
+    def broadcast_roll_dice(self, roller):
+        for player in self.players:
+            if player is self.cur_player:
+                player.send({'action': 'roll_dice'})
+            else:
+                player.send({'action': 'wait_dice', 'roller': roller})
+
+    def broadcast_dice_result(self, left, right):
+        for player in self.players:
+            player.send({'action': 'dice_result', 'left': left, 'right': right}) 
+
+    # sends the player's client the player's updated resources to be displayed on their screen
+    def message_update_resources(self, player):
+        player.send({'action': 'update_resources', 'resources': player.resources})
+
+    # takes a hextype as an enum and converts it to its proper string form
+    def hextype_to_string(self, enum):
+        conversions = {HexType.FOREST: 'wood', HexType.SHEEP: 'sheep', HexType.WHEAT: 'wheat',
+                       HexType.MOUNTAIN: 'ore', HexType.REDDISH_ORANGE: 'reddish-orange', HexType.CACTUS: None}
+        return conversions[enum] 
+
+    # get the resources from the hexes adjacent to the the node and put them into a format
+    # that can be processed by the Player class, i.e. {'resource-name': number of resource}
+    def resources_around_node(self, node):
+        new_resources = {}
+        for hex in node.hexes:
+            resource = self.hextype_to_string(hex.type)
+            if resource:
+                try:
+                    new_resources[resource] += 1
+                except KeyError:
+                    # resource not there yet; needs to be created
+                    new_resources[resource] = 1
+
+        return new_resources
 
     # update the clients on a new settlement
     def new_settlement(self, settlement, owner):

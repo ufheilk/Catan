@@ -9,6 +9,48 @@ from text import SelectableText, get_font_height, get_font_width
 
 pygame.init()
 
+large_font_size = 18
+font_type = 'graph-35.ttf'
+large_font = pygame.font.Font(font_type, large_font_size)
+large_font_height = get_font_height(large_font)
+
+class ResourceRow:
+    """A single line of colored text within a ResourceBlock (itself within the sidebar) representing a single resource"""
+    
+    def __init__(self, x, y, resource, color):
+        self.resource = resource
+        self.color = color
+        self.num_resource = 0  # always start with zero of a resource
+        self.text = SelectableText(large_font, self.resource + ': ' + str(self.num_resource), self.color, x, y)
+
+    def check_for_mouse(self, mouse_pos):
+       return self.text.check_for_mouse(mouse_pos)
+
+    # change the value of this Row's resource to new
+    def update(self, new):
+        self.num_resource = new
+        self.text.text = self.resource + ': ' + str(self.num_resource)
+        # make sure to re-render text
+        self.text.render()
+
+    def draw(self, screen):
+        self.text.draw(screen)
+
+class ResourceBlock:
+    """A block of colored text within the sidebar representing the resources associated with a player"""
+
+    def __init__(self, x, start_y):
+        self.resources = []
+        y_displacements = [large_font_height * i for i in range(5)] 
+        resources = ['Wood', 'Brick', 'Sheep', 'Wheat', 'Ore']
+        colors = [DARK_GREEN, ORANGE_RED, LIGHT_GREEN, GOLDENROD, SLATE_GRAY]
+        for y_displacement, resource, color in zip(y_displacements, resources, colors):
+            self.resources.append(ResourceRow(x, start_y + y_displacement, resource, color))
+
+    def draw(self, screen):
+        for resource in self.resources:
+            resource.draw(screen)
+
 class SideBar:
     """All the info to be displayed at the side of the screen"""
     x = 875  # left side of the bar
@@ -39,10 +81,10 @@ class SideBar:
                                            * num_players
 
         # resources are the first thing after the players
-        self.resources_header = SelectableText(self.large_font, 'Resources: ', SideBar.normal_header_text_color,
-                                               SideBar.x, self.cur_top)
+        self.resources_header = SelectableText(self.large_font, 'Resources: ', SideBar.normal_header_text_color, SideBar.x, self.cur_top)
         self.cur_top += self.large_font_height
-        self.resources = self.create_resources()
+        self.resources = ResourceBlock(SideBar.x, self.cur_top)
+        self.cur_top += 5 * self.large_font_height  # 5 for the number of different resources
 
         # next come the development cards
         self.cards_header = SelectableText(self.large_font, 'Dev Cards: ', SideBar.normal_header_text_color,
@@ -60,21 +102,6 @@ class SideBar:
         box_width = SideBar.chars_per_line * get_font_width(self.large_font)
         self.box = NonCenteredRect(SideBar.background, self.cur_top - SideBar.y, box_width,
                                    SideBar.x, SideBar.y)
-
-    # create the 5 colored displays for each resources
-    def create_resources(self):
-        resources = []
-        resources.append(SelectableText(self.large_font, 'Wood: 0', DARK_GREEN, SideBar.x, self.cur_top))
-        self.cur_top += self.large_font_height
-        resources.append(SelectableText(self.large_font, 'Brick: 0', ORANGE_RED, SideBar.x, self.cur_top))
-        self.cur_top += self.large_font_height
-        resources.append(SelectableText(self.large_font, 'Sheep: 0', LIGHT_GREEN, SideBar.x, self.cur_top))
-        self.cur_top += self.large_font_height
-        resources.append(SelectableText(self.large_font, 'Wheat: 0', GOLDENROD, SideBar.x, self.cur_top))
-        self.cur_top += self.large_font_height
-        resources.append(SelectableText(self.large_font, 'Ore: 0', SLATE_GRAY, SideBar.x, self.cur_top))
-        self.cur_top += self.large_font_height
-        return resources
 
     # create the 4 different development cards
     def create_cards(self):
@@ -119,7 +146,7 @@ class SideBar:
 
     # select among resources
     def select_resource(self, mouse_pos):
-        self.select_common(self.resources, mouse_pos)
+        self.select_common(self.resources.resources, mouse_pos)
 
     # select among development cards
     def select_card(self, mouse_pos):
@@ -148,7 +175,7 @@ class SideBar:
             # 2 (possibly more, but I hope this is not possible) possible selections
             selected[0].select()
             for item in selected[1:]:
-                item.deselect()
+                item.deselect()        
 
     def deselect(self, category):
         for item in category:
@@ -162,8 +189,7 @@ class SideBar:
             player.draw(screen)
 
         self.resources_header.draw(screen)
-        for resource in self.resources:
-            resource.draw(screen)
+        self.resources.draw(screen)
 
         self.cards_header.draw(screen)
         for card in self.cards:
@@ -176,9 +202,9 @@ class SideBar:
 
 class GameBoard:
     """Represents everything to be drawn to the screen"""
-    def __init__(self, hex_board_x, hex_board_y, layout, num_players, dice_x=100, dice_y=100):
+    def __init__(self, hex_board_x, hex_board_y, layout, num_players, dice_y=80):
         self.hex_board = GameHexBoard(hex_board_x, hex_board_y, layout)
-        self.dice = Dice((dice_x, dice_y))
+        self.dice = Dice(self.hex_board.center_x(), dice_y)
         self.sidebar = SideBar(num_players)
 
     def select_settlement(self, mouse_pos):

@@ -33,6 +33,11 @@ class ClientChannel(PodSixNet.Channel.Channel):
         game_id = data['game_id']
         self._server.delegate_to_game(channel, game_id, 'select_road', data)
 
+    def Network_stop_dice(self, data):
+        channel = self
+        game_id = data['game_id']
+        self._server.delegate_to_game(channel, game_id, 'stop_dice', data)
+
 
 class CatanServer(PodSixNet.Server.Server):
     """Server for hosting games of Catan"""

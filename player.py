@@ -16,6 +16,11 @@ class ServerPlayer:
     def send(self, data):
         self.channel.Send(data)
 
+    def modify_resources(self, resource_changes):
+        for key in resource_changes:
+            self.resources[key] += resource_changes[key]
+
+
 
 class ClientMyPlayer:
     """Holds a player's personal info"""
